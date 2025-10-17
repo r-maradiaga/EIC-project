@@ -29,7 +29,10 @@ def fetch_data(query):
         return results
     finally:
         cursor.close()
-        conn.close()
+
+def close_connection():
+    conn.close()
+
 
 if __name__ == "__main__":
     sample_query = "SELECT * FROM CUSTOMERS LIMIT 10"
