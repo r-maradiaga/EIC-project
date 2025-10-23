@@ -1,6 +1,11 @@
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from data_handler import get_customers_df, get_transactions_df
 
 def get_omnichannel_analysis():

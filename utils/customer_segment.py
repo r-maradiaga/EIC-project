@@ -2,6 +2,11 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from data_handler import get_customers_df
 
 def get_age_by_segment_and_channel():
@@ -14,7 +19,6 @@ def get_age_by_segment_and_channel():
         aggfunc='mean'
     )
     
-    # Prepare data for grouped bar chart by melting the pivot table
     age_data_melted = pivot_table.reset_index().melt(
         id_vars='customer_segment',
         var_name='acquisition_channel', 
@@ -28,7 +32,6 @@ def get_age_by_segment_and_channel():
         x='customer_segment',
         y='average_age',
         color='acquisition_channel',
-        title='Average Customer Age by Segment and Acquisition Channel',
         labels={
             'average_age': 'Average Age (Years)',
             'customer_segment': 'Customer Segment',
@@ -39,26 +42,33 @@ def get_age_by_segment_and_channel():
     )
     
     grouped_bar_figure.update_layout(
-        width=800,
-        height=500,
+        width=900,
+        height=600,
         xaxis_title='Customer Segment',
         yaxis_title='Average Age (Years)',
         legend_title='Acquisition Channel',
-        showlegend=True
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        margin=dict(t=100, b=80, l=80, r=80),
+        xaxis=dict(
+            tickangle=0,
+            categoryorder='array',
+            categoryarray=segment_order
+        )
     )
     
-    for trace in grouped_bar_figure.data:
-        grouped_bar_figure.add_trace(
-            go.Scatter(
-                x=trace.x,
-                y=[y + 0.5 for y in trace.y],
-                text=[f"{y:.1f}" for y in trace.y],
-                mode='text',
-                textposition='top center',
-                showlegend=False,
-                textfont=dict(size=10, color='black')
-            )
-        )
+    # Add text annotations directly to bars instead of separate traces
+    grouped_bar_figure.update_traces(
+        texttemplate='%{y:.1f}',
+        textposition='outside',
+        textfont_size=10
+    )
     
     return pivot_table, grouped_bar_figure
 
@@ -73,7 +83,7 @@ def get_lifetime_value_by_segment():
     
     segment_order = ['Dormant', 'New', 'Occasional', 'Frequent', 'High-Value']
     
-    # Reorder the summary DataFrame to match the custom order
+    # Reorder the summary DataFrame to match the order
     summary['customer_segment'] = pd.Categorical(summary['customer_segment'], categories=segment_order, ordered=True)
     summary = summary.sort_values('customer_segment').reset_index(drop=True)
     

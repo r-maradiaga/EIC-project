@@ -73,7 +73,7 @@ def convert_snowflake_types(df):
                         any(char in str(first_value) for char in ['/', '-']) and 
                         any(char.isdigit() for char in str(first_value))):
                         try:
-                            df_converted[col] = pd.to_datetime(df_converted[col], errors='coerce', infer_datetime_format=False)
+                            df_converted[col] = pd.to_datetime(df_converted[col], errors='coerce')
                         except:
                             pass  # Keep as string if conversion fails
     
@@ -131,7 +131,7 @@ def close_connection():
 
 
 if __name__ == "__main__":
-    # Test the different data retrieval methods
+    # For testing
     print("Testing raw data fetch:")
     sample_query = "SELECT * FROM CUSTOMERS LIMIT 5"
     raw_data = fetch_data(sample_query)

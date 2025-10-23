@@ -1,7 +1,7 @@
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
-from true_customer_acquisition_cost import get_final_df
+from utils.true_customer_acquisition_cost import get_final_df
 
 st.header("True Customer Acquisition Cost")
 st.write("Comprehensive analysis of customer acquisition costs including direct spend, indirect costs, and true CAC by channel")
@@ -10,7 +10,6 @@ try:
     acquisition_cost_dataframe = get_final_df()
     if acquisition_cost_dataframe is not None and not acquisition_cost_dataframe.empty:
         
-        # Key Metrics at the top
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             total_cost = acquisition_cost_dataframe['true_total_cost'].sum()
@@ -84,18 +83,16 @@ try:
             )
             customers_fig.update_layout(height=400)
             st.plotly_chart(customers_fig, use_container_width=True)
+        
+        with st.expander("Acquisition cost table"):
+            display_df = acquisition_cost_dataframe.copy()
+            money_columns = ['total_direct_spend', 'indirect_cost', 'staff_cost', 'technology_cost', 'returns_processing_cost', 'true_total_cost', 'true_cac']
+            for col in money_columns:
+                if col in display_df.columns:
+                    display_df[col] = display_df[col].apply(lambda x: f"${x:,.2f}")
             
-        st.subheader("Detailed Breakdown")
-        
-        # Format the dataframe for better display
-        display_df = acquisition_cost_dataframe.copy()
-        money_columns = ['total_direct_spend', 'indirect_cost', 'staff_cost', 'technology_cost', 'returns_processing_cost', 'true_total_cost', 'true_cac']
-        for col in money_columns:
-            if col in display_df.columns:
-                display_df[col] = display_df[col].apply(lambda x: f"${x:,.2f}")
-        
-        st.dataframe(display_df, use_container_width=True)
-        
+            st.dataframe(display_df, use_container_width=True)
+            
         st.subheader("Insights")
         st.write("Instagram had the highest true CAC, which shows efficient use of marketing spend and indirect costs.")
         # TODO - DOUBLE how TRUE CAC IS CALCULATED

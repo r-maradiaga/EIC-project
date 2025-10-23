@@ -1,5 +1,5 @@
 import streamlit as st
-from customer_segment import get_customer_segment_analysis
+from utils.customer_segment import get_customer_segment_analysis
 
 try:
     segment_analysis_results = get_customer_segment_analysis()

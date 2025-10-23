@@ -1,5 +1,5 @@
 import streamlit as st
-from omnichannel_analysis import get_omnichannel_analysis
+from utils.omnichannel_analysis import get_omnichannel_analysis
 
 st.header("Omnichannel vs Single-Channel Analysis")
 st.write("Analysis of customer lifetime value comparing omnichannel customers (using 2+ channels) vs single-channel customers")
@@ -18,14 +18,18 @@ try:
         if omnichannel_mean_clv > single_channel_mean_clv:
             clv_improvement_percentage = ((omnichannel_mean_clv - single_channel_mean_clv) / single_channel_mean_clv) * 100
             st.success(f"Omnichannel customers have {clv_improvement_percentage:.1f}% higher average lifetime value")
-        
-    st.subheader("Customer Lifetime Value Comparison")
-    st.plotly_chart(bar_chart_figure, use_container_width=True)
     
-    st.subheader("Customer Lifetime Value Distribution")
-    st.plotly_chart(box_plot_figure, use_container_width=True)
+    tab1, tab2 = st.tabs(["CLV Comparison (Bar chart)", "CLV Distribution (Box plot)"])
+
+    with tab1:
+        st.subheader("Customer Lifetime Value Comparison")
+        st.plotly_chart(bar_chart_figure)
     
-    with st.expander("View Detailed Customer Data"):
+    with tab2:
+        st.subheader("Customer Lifetime Value Distribution")
+        st.plotly_chart(box_plot_figure)
+    
+    with st.expander("Detailed Customer Data"):
         st.dataframe(detailed_customer_dataframe)
         
 except Exception as error:
