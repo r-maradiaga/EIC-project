@@ -93,11 +93,6 @@ try:
             
             st.dataframe(display_df, use_container_width=True)
             
-        st.subheader("Insights")
-        st.write("Instagram had the highest true CAC, which shows efficient use of marketing spend and indirect costs.")
-        # TODO - DOUBLE how TRUE CAC IS CALCULATED
-        # TODO - make the insights change programatically so that if we use another dataset the insights still make sense
-        
 except Exception as error:
     st.error(f"Error loading customer acquisition cost data: {error}")
     st.write("Please check your data source and try again.")

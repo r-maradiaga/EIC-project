@@ -33,12 +33,18 @@ def get_omnichannel_analysis():
     # omnichannel vs single channel
     df['cohort'] = df['channels_used'].apply(lambda x: 'Omnichannel' if x >= 2 else 'Single-channel')
      
-    summary = df.groupby('cohort')['lifetime_value'].agg(['count', 'mean', 'median', lambda x: x.quantile(0.9)])
-    summary.columns = ['n_customers', 'mean_clv', 'median_clv', 'p90_clv']
+    summary = df.groupby('cohort')['lifetime_value'].agg(['count', 'mean', 'median'])
+    summary.columns = ['n_customers', 'mean_clv', 'median_clv']
+    
+    # Round mean_clv to 2 decimal places
+    summary['mean_clv'] = summary['mean_clv'].round(2)
+    
+    cohort_order = ['Single-channel', 'Omnichannel']
+    summary = summary.reindex(cohort_order)
      
     fig_bar = go.Figure(data=[
-        go.Bar(name='Mean CLV', x=summary.index, y=summary['mean_clv']),
-        go.Bar(name='Median CLV', x=summary.index, y=summary['median_clv'])
+        go.Bar(name='Mean CLV', x=cohort_order, y=[summary.loc[cohort, 'mean_clv'] for cohort in cohort_order]),
+        go.Bar(name='Median CLV', x=cohort_order, y=[summary.loc[cohort, 'median_clv'] for cohort in cohort_order])
     ])
     fig_bar.update_layout(
         title='Mean vs Median CLV by Cohort',
@@ -46,10 +52,12 @@ def get_omnichannel_analysis():
         yaxis_title='CLV',
         barmode='group',
         width=800,
-        height=500
+        height=500,
+        xaxis=dict(categoryorder='array', categoryarray=cohort_order)
     )
 
-    fig_box = px.box(df, x='cohort', y='lifetime_value', title='CLV Distribution by Cohort')
+    fig_box = px.box(df, x='cohort', y='lifetime_value', title='CLV Distribution by Channel Cohort', 
+                     category_orders={'cohort': cohort_order})
     fig_box.update_layout(xaxis_title='Cohort', yaxis_title='CLV', width=800, height=500)
     
     return summary, df, fig_bar, fig_box

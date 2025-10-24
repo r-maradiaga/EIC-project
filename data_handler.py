@@ -1,7 +1,6 @@
 import snowflake.connector
 import pandas as pd
 import decimal
-from datetime import datetime
 from dotenv import load_dotenv
 
 import os
@@ -119,12 +118,27 @@ def fetch_data_as_dict(query):
     return df.to_dict('records')
 
 def get_customers_df():
-    """Get customers data as DataFrame with standardized column names"""
-    return fetch_data_as_dataframe_standardized("SELECT * FROM CUSTOMERS")
+    """Get customers data as DataFrame with standardized column names - combines CUSTOMERS and CUSTOMERS_EXTRA"""
+    customers = fetch_data_as_dataframe_standardized("SELECT * FROM CUSTOMERS")
+    customers_extra = fetch_data_as_dataframe_standardized("SELECT * FROM CUSTOMERS_EXTRA")
+    
+    combined_customers = pd.concat([customers, customers_extra], ignore_index=True)
+    
+    combined_customers = combined_customers.drop_duplicates(subset=['customer_id'], keep='first')
+    
+    return combined_customers
 
 def get_transactions_df():
-    """Get transactions data as DataFrame with standardized column names"""
-    return fetch_data_as_dataframe_standardized("SELECT * FROM TRANSACTIONS")
+    """Get transactions data as DataFrame with standardized column names - combines TRANSACTIONS and TRANSACTIONS_EXTRA"""
+    transactions = fetch_data_as_dataframe_standardized("SELECT * FROM TRANSACTIONS")
+    transactions_extra = fetch_data_as_dataframe_standardized("SELECT * FROM TRANSACTIONS_EXTRA")
+    
+    combined_transactions = pd.concat([transactions, transactions_extra], ignore_index=True)
+    
+    if 'transaction_id' in combined_transactions.columns:
+        combined_transactions = combined_transactions.drop_duplicates(subset=['transaction_id'], keep='first')
+    
+    return combined_transactions
 
 def close_connection():
     conn.close()
@@ -133,7 +147,7 @@ def close_connection():
 if __name__ == "__main__":
     # For testing
     print("Testing raw data fetch:")
-    sample_query = "SELECT * FROM CUSTOMERS LIMIT 5"
+    sample_query = "SELECT * FROM CUSTOMERS_EXTRA LIMIT 5"
     raw_data = fetch_data(sample_query)
     print(f"Raw data (first row): {raw_data[0] if raw_data else 'No data'}")
     

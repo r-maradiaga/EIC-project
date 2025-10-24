@@ -10,30 +10,68 @@ from data_handler import fetch_data_as_dataframe_standardized
 def get_final_df():
     try:
         customers = fetch_data_as_dataframe_standardized("SELECT customer_id, acquisition_channel FROM CUSTOMERS")
-        spend = fetch_data_as_dataframe_standardized("SELECT spend_id, channel, spend_amount FROM MARKETING_SPEND")
-        touchpoints = fetch_data_as_dataframe_standardized("SELECT touchpoint_id, customer_id, channel, converted_flag FROM CUSTOMER_TOUCHPOINTS")
+        customers_extra = fetch_data_as_dataframe_standardized("SELECT customer_id, acquisition_channel FROM CUSTOMERS_EXTRA")
+        combined_customers = pd.concat([customers, customers_extra], ignore_index=True)
+        combined_customers = combined_customers.drop_duplicates(subset=['customer_id'], keep='first')
         
+        touchpoints = fetch_data_as_dataframe_standardized("SELECT touchpoint_id, customer_id, channel, converted_flag FROM CUSTOMER_TOUCHPOINTS")
+        touchpoints_extra = fetch_data_as_dataframe_standardized("SELECT touchpoint_id, customer_id, channel, converted_flag FROM CUSTOMER_TOUCHPOINTS_EXTRA")
+        combined_touchpoints = pd.concat([touchpoints, touchpoints_extra], ignore_index=True)
+        combined_touchpoints = combined_touchpoints.drop_duplicates(subset=['touchpoint_id'], keep='first')
+        
+        spend = fetch_data_as_dataframe_standardized("SELECT spend_id, channel, spend_amount FROM MARKETING_SPEND")
         spend = spend.drop_duplicates(subset='spend_id')
-        touchpoints = touchpoints.drop_duplicates(subset='touchpoint_id')
          
-        acquisition_summary = customers['acquisition_channel'].value_counts().reset_index()
+        acquisition_summary = combined_customers['acquisition_channel'].value_counts().reset_index()
         acquisition_summary.columns = ['channel', 'customers_acquired']
          
         spend_summary = spend.groupby('channel', as_index=False).agg(total_direct_spend=('spend_amount', 'sum'))
         spend_summary.columns = ['channel', 'total_direct_spend']
 
-        session_summary = touchpoints.query("converted_flag == True")['channel'].value_counts().reset_index()
+        session_summary = combined_touchpoints.query("converted_flag == True")['channel'].value_counts().reset_index()
         session_summary.columns = ['channel', 'count']
         session_summary['count'] = session_summary['count'].astype(int)
          
-        converted_customer_summary = touchpoints.query("converted_flag == True").groupby('channel', as_index=False).agg(converted_customers=('customer_id', 'nunique'))
-        converted_customer_summary.columns = ['channel', 'converted_customers']
+        # Map acquisition channels to their corresponding transaction channels
+        acquisition_to_touchpoint_mapping = {
+            'Direct': ['Direct'],
+            'Email': ['Email'], 
+            'Facebook': ['Facebook'],
+            'Google': ['Google'],
+            'Instagram': ['Instagram'],
+            'TikTok': ['TikTok'],
+            'Referral': ['Walk-in', 'Direct'],  # Referral customers often convert in-store or direct
+            'Social Media': ['Instagram', 'Facebook', 'TikTok', 'Walk-in']  # Social media maps to social platforms + store
+        }
+        
+        # Calculate conversions by tracking acquired customers through any of their mapped channels
+        converted_customer_summary = []
+        
+        for acq_channel, touchpoint_channels in acquisition_to_touchpoint_mapping.items():
+            acquired_customer_ids = combined_customers[
+                combined_customers['acquisition_channel'] == acq_channel
+            ]['customer_id'].tolist()
+            
+            if acquired_customer_ids:
+                converted_count = combined_touchpoints[
+                    (combined_touchpoints['customer_id'].isin(acquired_customer_ids)) &
+                    (combined_touchpoints['channel'].isin(touchpoint_channels)) &
+                    (combined_touchpoints['converted_flag'] == True)
+                ]['customer_id'].nunique()
+            else:
+                converted_count = 0
+                
+            converted_customer_summary.append({
+                'channel': acq_channel,
+                'converted_customers': converted_count
+            })
+        
+        converted_customer_summary = pd.DataFrame(converted_customer_summary)
 
         # allocate indirect cost proportionally
         total_indirect = 10000
         session_summary['indirect_cost'] = (session_summary['count'] / session_summary['count'].sum()) * total_indirect
         
-        # merge all summaries
         merged_df = (
             acquisition_summary
             .merge(spend_summary, on='channel', how='outer')
@@ -44,10 +82,10 @@ def get_final_df():
         
         # detailed indirect costs
         indirect_details = pd.DataFrame({
-            'channel': ['Email', 'Facebook', 'Google', 'Instagram', 'TikTok', 'Walk-in', 'Direct'],
-            'staff_cost': [400, 1200, 1800, 1500, 1000, 2500, 800],
-            'technology_cost': [600, 1000, 1500, 1400, 1200, 400, 700],
-            'returns_processing_cost': [300, 800, 1000, 900, 1100, 300, 500]
+            'channel': ['Direct', 'Email', 'Facebook', 'Google', 'Instagram', 'Referral', 'Social Media', 'TikTok'],
+            'staff_cost': [800, 400, 1200, 1800, 1500, 1000, 1100, 1000],
+            'technology_cost': [700, 600, 1000, 1500, 1400, 800, 900, 1200],
+            'returns_processing_cost': [500, 300, 800, 1000, 900, 600, 700, 1100]
         })
 
         # convert all cost columns to float before assigning final costs
